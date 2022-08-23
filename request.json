@@ -21,6 +21,9 @@
     }
   },
   {
+    "type": "divider"
+  },
+  {
     "type": "actions",
     "elements": [
       {

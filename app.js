@@ -14,22 +14,11 @@ const app = new App({
 
 });
 
-var block;
 
-fs.readFile("text.json", 'utf8', async (err, data) => {
-  if (err) throw err;
-  try {        
-    block   = JSON.parse(data); 
-
-  // use block accordingly**
-    
-  } catch (e) {
-    
-  }
-});
 
 app.command('/workspace-request', async ({ command, ack, respond }) => {
   await ack();
+
 
   //posts message to user
   await app.client.chat.postEphemeral({
@@ -38,59 +27,23 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
     text: "Your request has been sent to workspace managers. Thanks!"
   })
 
-  const blocks = [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "New Workspace Request:"
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*User:* @${command.user_name}`
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*Description:* ${command.text}`
-      }
-    },
-    {
-      "type": "actions",
-      "elements": [
-        {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Add to tasks"
-          },
-          "action_id": "add_task"
-        },
-        {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Resolve"
-          },
-          "action_id": "resolve"
-        }
-      ]
+  fs.readFile("request.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {        
+      const block = JSON.parse(data);    
+      block[1].text.text = `*User:* @${command.user_name}`
+      block[2].text.text = `*Description:* ${command.text}`
+    
+      //posts message to workspace core
+      await app.client.chat.postMessage({
+        channel: "workspace-core",
+        link_names: true,
+        text: "New Workspace Request",
+        blocks: block,
+      }) 
+    } catch (e) {
     }
-  ]
-  block[2].text.text = "Testing!"
-
-  //posts message to workspace core
-  await app.client.chat.postMessage({
-    channel: "workspace-core",
-    link_names: true,
-    blocks: block,
-  })
-
+  });
 });
 
 
@@ -101,72 +54,41 @@ app.action('add_task', async ({ body, ack, say }) => {
 
   metadata = JSON.stringify({
     "requesting_user": body.message.blocks[1].text.text,
-    "approving_user": body.user,
+    "approving_user": body.user.id,
     "message_ts": body.container.message_ts,
-    "channel_id": body.container.channel_id
+    "channel_id": body.container.channel_id,
+    "description" : body.message.blocks[2].text.text
   })
 
-  try {
-    // Call views.open with the built-in client
-    const result = await app.client.views.open({
-      // Pass a valid trigger_id within 3 seconds of receiving it
-      trigger_id: body.trigger_id,
-      // View payload
-      view: {
-        type: 'modal',
-        // View identifier
-        callback_id: 'add_task_modal',
-        title: {
-          type: 'plain_text',
-          text: 'Add Task'
-        },
-        private_metadata: metadata,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: 'Description: '
-            },
+  fs.readFile("add_task_modal.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {        
+      const block = JSON.parse(data);    
+      const result = await app.client.views.open({
+        // Pass a valid trigger_id within 3 seconds of receiving it
+        trigger_id: body.trigger_id,
+        // View payload
+        view: {
+          type: 'modal',
+          // View identifier
+          callback_id: 'add_task_modal',
+          title: {
+            type: 'plain_text',
+            text: 'Add Task'
           },
-          {
-            type: 'input',
-            block_id: 'input_d',
-            label: {
-              type: 'plain_text',
-              text: 'Task Name'
-            },
-            element: {
-              type: 'plain_text_input',
-              action_id: 'dreamy_input',
-              multiline: false
-            }
-          },
-          {
-            type: 'input',
-            block_id: 'input_c',
-            label: {
-              type: 'plain_text',
-              text: 'Details'
-            },
-            element: {
-              type: 'plain_text_input',
-              action_id: 'dreamy_input',
-              multiline: true
-            }
+          private_metadata: metadata,
+          blocks: block,
+          submit: {
+            type: 'plain_text',
+            text: 'Add as task'
           }
-        ],
-        submit: {
-          type: 'plain_text',
-          text: 'Add as task'
         }
-      }
-    });
-    //console.log(result);
-  }
-  catch (error) {
-    console.log(error);
-  }
+      });
+      //console.log(result);
+    } catch (e) {
+      console.log(result)
+    }
+  });
 });
 
 
@@ -177,40 +99,33 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   metadata = JSON.parse(body.view.private_metadata)
 
-  const blocks = [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "New Workspace Request:"
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*User:*`
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*Description:*`
-      }
-    },
-  ]
-  //remove text buttons
-  try{
-    const result = await app.client.chat.update({
-      channel: metadata.channel_id,
-      ts: metadata.message_ts,
-      blocks: blocks
-    })
-    console.log(result)
-  }catch{
-    console.log(error)
-  }
+  fs.readFile("request.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {        
+      const block = JSON.parse(data); 
+      block[1].text.text = metadata.requesting_user
+      block[2].text.text = metadata.description   
+      block[4] = {
+        "type":"context",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": `Resolved by <@${metadata.approving_user}>`
+          }
+        ]
+      };
+    
+      //posts message to workspace core
+      await app.client.chat.update({
+        channel: metadata.channel_id,
+        link_names: true,
+        ts: metadata.message_ts,
+        text: "New Workspace Request",
+        blocks: block,
+      }) 
+    } catch (e) {
+    }
+  });
 
   //add to spreadsheet
   
