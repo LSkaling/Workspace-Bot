@@ -1,3 +1,5 @@
+org: eventualiguana
+console: true
 service: serverless-bolt-js
 frameworkVersion: '3'
 provider:
