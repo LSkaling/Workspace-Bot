@@ -110,7 +110,7 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Resolved by <@${metadata.approving_user}>`
+            "text": `Added to tasks by <@${metadata.approving_user}>`
           }
         ]
       };
