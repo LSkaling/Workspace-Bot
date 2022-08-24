@@ -440,12 +440,15 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
     if (taskName == null) { //task was not found in sheet
       await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
     } else {
+      
 
       fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
         if (err) throw err;
         try {
           const view = JSON.parse(data);
           view.blocks[1].text.text = `*Task ID:* ${taskIDString}\n*Task name:* ${taskName}\n *Task Description:* ${taskDescription}`
+          view.private_metadata = taskIDString
+          console.log(JSON.stringify(view))
           //opens modal
           const result = await app.client.views.open({
             // Pass a valid trigger_id within 3 seconds of receiving it
@@ -465,6 +468,29 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
 
 });
 
+//submitting the complete task modal
+app.view('submit_task', async ({ ack, body, view, client, logger }) => {
+  // Acknowledge the view_submission request
+  await ack();
+
+  //metadata = JSON.parse(body.view.private_metadata)
+  console.log(`submit body: ${JSON.stringify(body.view.private_metadata)}`)
+
+  const taskID = body.view.private_metadata
+  const userID = body.user.id
+  const userinfo = await app.client.users.info({
+    user: userID
+  })
+  const useremail = userinfo.user.profile.email
+
+  console.log(`\ntask ID: ${taskID}, userID: ${userID}, useremail: ${useremail}`)
+
+  //update cleaning duties page to reflect completed task
+
+
+  //update requirements page to update user contirbutions
+
+});
 
 // Handle the Lambda function event
 module.exports.handler = async (event, context, callback) => {

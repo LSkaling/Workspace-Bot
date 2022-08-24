@@ -16,6 +16,7 @@
         "text": "Workspace Contribution",
         "emoji": true
     },
+    "private_metadata":"",
     "blocks": [
         {
             "type": "section",
