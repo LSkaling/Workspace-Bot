@@ -2,32 +2,12 @@
 var fs = require('fs');
 const { App, AwsLambdaReceiver } = require('@slack/bolt');
 const { GoogleSpreadsheet } = require('google-spreadsheet')
-const { promisify } = require('util')
-const { GoogleAuth } = require('google-auth-library');
-const { google } = require('googleapis');
 
 const creds = require('./client_secret.json')
 const doc = new GoogleSpreadsheet('1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/');
 
-const auth = new GoogleAuth(
-  { scopes: 'https://www.googleapis.com/auth/spreadsheet' });
 
-const service = google.sheets({ version: 'v4', auth }); //added from google dev
 
-async function accessSpreadsheet() {
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
-
-  await doc.loadInfo(); // loads document properties and worksheets
-  console.log(doc.title);
-
-  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
-  console.log(sheet.title);
-  console.log(sheet.rowCount);
-
-}
 
 // Initialize your custom receiver
 const awsLambdaReceiver = new AwsLambdaReceiver({
@@ -186,15 +166,9 @@ app.action('resolve', async ({ body, ack, say }) => {
   });
 });
 
-app.action('resolve_modal_a', async ({ body, ack, say }) => {
-  ack()
-  console.log("action found")
-})
+app.action('resolve_modal_a', async ({ body, ack, say }) => {ack()})
 
-app.action('resolve_modal_b', async ({ body, ack, say }) => {
-  ack()
-  console.log("action found")
-})
+app.action('resolve_modal_b', async ({ body, ack, say }) => {ack()})
 
 //submitting the "add task" modal
 app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
@@ -298,7 +272,11 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
         "type": "mrkdwn",
         "text": `*Task description:* ${detailsField}`
       }
-    }]
+    },
+    {
+      "type": "divider"
+    }
+  ]
 
 
   })
@@ -386,10 +364,6 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
       })
     }
   });
-
-
-
-
 });
 
 
