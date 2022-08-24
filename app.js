@@ -66,6 +66,10 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
         link_names: true,
         text: "New Workspace Request",
         blocks: block,
+        metadata: {
+          "requesting_user_id":command.user_id,
+          "requesting_user_name": command.user_name
+        }
       }) 
     } catch (e) {
     }
@@ -83,7 +87,8 @@ app.action('add_task', async ({ body, ack, say }) => {
     "approving_user": body.user.id,
     "message_ts": body.container.message_ts,
     "channel_id": body.container.channel_id,
-    "description" : body.message.blocks[2].text.text
+    "description" : body.message.blocks[2].text.text,
+    "approving_user_name": body.user.username
   })
 
   fs.readFile("add_task_modal.json", 'utf8', async (err, data) => {
@@ -125,6 +130,10 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   metadata = JSON.parse(body.view.private_metadata)
 
+  const nameField = body.view.state.values.input_d.dreamy_input.value
+  const detailsField = body.view.state.values.input_c.dreamy_input.value
+  const requesterName = " " //TODO: add requester name
+
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {        
@@ -141,14 +150,14 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
         ]
       };
     
-      //posts message to workspace core
-      await app.client.chat.update({
-        channel: metadata.channel_id,
-        link_names: true,
-        ts: metadata.message_ts,
-        text: "New Workspace Request",
-        blocks: block,
-      }) 
+      //posts message to workspace core - add this back in to remove buttons
+      // await app.client.chat.update({
+      //   channel: metadata.channel_id,
+      //   link_names: true,
+      //   ts: metadata.message_ts,
+      //   text: "New Workspace Request",
+      //   blocks: block,
+      // }) 
     } catch (e) {
     }
   });
@@ -170,7 +179,8 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
   const cellRange = `A1:H${sheet.rowCount}`
 
   await sheet.loadCells(cellRange)
-  sheet.addRow([sheet.rowCount, "test2"])
+
+  sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", requesterName, metadata.approving_user_name])
 
 });
 
