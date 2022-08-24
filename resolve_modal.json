@@ -1,0 +1,73 @@
+[
+  {
+    "type": "section",
+    "block_id": "section678",
+    "text": {
+      "type": "mrkdwn",
+      "text": "Pick an item from the dropdown list"
+    },
+    "accessory": {
+      "action_id": "resolve_modal_a",
+      "type": "static_select",
+      "placeholder": {
+        "type": "plain_text",
+        "text": "Select an item"
+      },
+      "options": [
+        {
+          "text": {
+            "type": "plain_text",
+            "text": "*this is plain_text text*"
+          },
+          "value": "value-0"
+        },
+        {
+          "text": {
+            "type": "plain_text",
+            "text": "*this is plain_text text*"
+          },
+          "value": "value-1"
+        },
+        {
+          "text": {
+            "type": "plain_text",
+            "text": "*this is plain_text text*"
+          },
+          "value": "value-2"
+        }
+      ]
+    }
+  },
+  {
+    "type": "divider"
+  },
+  {
+    "type": "section",
+    "text": {
+      "type": "plain_text",
+      "text": "Check out these charming checkboxes"
+    },
+    "accessory": {
+      "type": "checkboxes",
+      "action_id": "resolve_modal_a",
+      "initial_options": [
+        {
+          "value": "A1",
+          "text": {
+            "type": "plain_text",
+            "text": "Checkbox 1"
+          }
+        }
+      ],
+      "options": [
+        {
+          "value": "A1",
+          "text": {
+            "type": "plain_text",
+            "text": "Checkbox 1"
+          }
+        }
+      ]
+    }
+  }
+]

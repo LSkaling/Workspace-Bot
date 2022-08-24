@@ -122,6 +122,59 @@ app.action('add_task', async ({ body, ack, say }) => {
   });
 });
 
+//User selects "resolve" from workspace request
+app.action('resolve', async ({ body, ack, say }) => {
+  await ack();
+
+  metadata = JSON.stringify({
+    "requesting_user": body.message.blocks[1].text.text,
+    "approving_user": body.user.id,
+    "message_ts": body.container.message_ts,
+    "channel_id": body.container.channel_id,
+    "description" : body.message.blocks[2].text.text,
+    "approving_user_name": body.user.username
+  })
+
+  fs.readFile("resolve_modal.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {        
+      const block = JSON.parse(data);    
+      const result = await app.client.views.open({
+        // Pass a valid trigger_id within 3 seconds of receiving it
+        trigger_id: body.trigger_id,
+        // View payload
+        view: {
+          type: 'modal',
+          // View identifier
+          callback_id: 'resolve_modal',
+          title: {
+            type: 'plain_text',
+            text: 'Resolve Task'
+          },
+          private_metadata: metadata,
+          blocks: block,
+          submit: {
+            type: 'plain_text',
+            text: 'Resolve'
+          }
+        }
+      });
+      //console.log(result);
+    } catch (e) {
+      //console.log(result)
+    }
+  });
+});
+
+app.action('resolve_modal_a', async ({ body, ack, say }) => {
+  ack()
+  console.log("action found")
+})
+
+app.action('resolve_modal_b', async ({ body, ack, say }) => {
+  ack()
+  console.log("action found")
+})
 
 //submitting the "add task" modal
 app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
@@ -162,6 +215,8 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
     }
   });
 
+  app.block
+
   //add to spreadsheet
   
   await doc.useServiceAccountAuth({
@@ -182,12 +237,6 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", requesterName, metadata.approving_user_name])
 
-});
-
-app.action('resolve', async ({ body, ack, say }) => {
-  await ack();
-
-  await say(`<@${body.user.id}> clicked the button`);
 });
 
 
