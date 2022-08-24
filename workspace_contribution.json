@@ -1,0 +1,52 @@
+{
+    "type": "modal",
+    "submit": {
+        "type": "plain_text",
+        "text": "Submit",
+        "emoji": true
+    },
+    "close": {
+        "type": "plain_text",
+        "text": "Cancel",
+        "emoji": true
+    },
+    "callback_id": "submit_task",
+    "title": {
+        "type": "plain_text",
+        "text": "Workspace Contribution",
+        "emoji": true
+    },
+    "blocks": [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Please confirm the following information:*"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Task ID: XXXX\nTask name: \n Task Description:"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Please acknowledge the following:*"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "By submitting this form I certify that I have fully completed the task above to the expectations required of the workspace contribution."
+            }
+        }
+    ]
+}

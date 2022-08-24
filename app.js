@@ -27,11 +27,18 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
   await ack();
 
   //posts message to user
-  await app.client.chat.postEphemeral({
-    channel: command.channel_id,
-    user: command.user_id,
-    text: "Your request has been sent to workspace managers. Thanks!"
-  })
+  try {
+    await app.client.chat.postEphemeral({
+      channel: command.channel_id,
+      user: command.user_id,
+      text: "Your request has been sent to workspace managers. Thanks!"
+    })
+  } catch (error) {
+    await app.client.chat.postMessage({
+      channel: command.user_id,
+      text: "Your request has been sent to workspace managers. Thanks!"
+    })
+  }
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
@@ -58,8 +65,6 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
     }
   });
 });
-
-
 
 //User selects "add task" from workspace request
 app.action('add_task', async ({ body, ack, say }) => {
@@ -166,9 +171,9 @@ app.action('resolve', async ({ body, ack, say }) => {
   });
 });
 
-app.action('resolve_modal_a', async ({ body, ack, say }) => {ack()})
+app.action('resolve_modal_a', async ({ body, ack, say }) => { ack() })
 
-app.action('resolve_modal_b', async ({ body, ack, say }) => {ack()})
+app.action('resolve_modal_b', async ({ body, ack, say }) => { ack() })
 
 //submitting the "add task" modal
 app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
@@ -252,13 +257,13 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
         "type": "mrkdwn",
         "text": metadata.message_description
       }
-    },    {
+    }, {
       "type": "section",
       "text": {
         "type": "mrkdwn",
         "text": `*Task ID:* ${sheet.rowCount}`
       }
-    },    
+    },
     {
       "type": "section",
       "text": {
@@ -276,7 +281,7 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
     {
       "type": "divider"
     }
-  ]
+    ]
 
 
   })
@@ -366,6 +371,107 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
   });
 });
 
+//Listing tasks
+app.command('/workspace-tasks', async ({ command, ack, respond }) => {
+  await ack();
+
+  //fetch from spreadsheet
+
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+
+  await doc.loadInfo(); // loads document properties and worksheets
+  console.log(doc.title);
+
+  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+  console.log(sheet.title);
+  console.log(sheet.rowCount);
+
+  const loadCellLocation = `A1:B${sheet.rowCount}`
+  await sheet.loadCells(loadCellLocation);
+
+  var text = ""//`ID \t Task Title`
+
+  const maxCellsToDispaly = 20
+  const cellsToDisplay = sheet.rowCount > maxCellsToDispaly ? maxCellsToDispaly : sheet.rowCount
+  for (let i = 0; i < cellsToDisplay; i++) {
+    text += `${sheet.getCell(i, 0).value} \t ${sheet.getCell(i, 1).value} \n`
+  }
+
+  await app.client.chat.postEphemeral({
+    channel: command.channel_id,
+    user: command.user_id,
+    text: text,
+
+  })
+});
+
+//completing tasks
+app.command('/workspace-complete', async ({ command, ack, respond }) => {
+  await ack();
+
+  const taskIDString = command.text
+
+  if (taskIDString.length != 4 || parseInt(taskIDString) == NaN) {
+    await respond("Invalid Job ID. Command should be in the following format: /workspace-complete XXXX")
+  } else {
+
+    const taskId = parseInt(taskIDString)
+    //open spreadsheet and attempt to find job ID
+    await doc.useServiceAccountAuth({
+      client_email: creds.client_email,
+      private_key: creds.private_key,
+    });
+
+    await doc.loadInfo(); // loads document properties and worksheets
+    console.log(doc.title);
+
+    const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+    console.log(sheet.title);
+    console.log(sheet.rowCount);
+
+    const cellRange = `A1:H${sheet.rowCount}`
+
+    await sheet.loadCells(cellRange)
+
+    var taskName
+    var taskDescription
+
+    for (let i = 0; i < sheet.rowCount; i++) {
+      if (sheet.getCell(i, 0).value == taskId) {
+        taskName = sheet.getCell(i, 1).value
+        taskDescription = sheet.getCell(i, 2).value
+      }
+    }
+
+    if (taskName == null) { //task was not found in sheet
+      await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
+    } else {
+      fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
+        if (err) throw err;
+        try {
+          const view = JSON.parse(data);
+          view.blocks[1].text.text = `*Task ID:* ${taskIDString}\n*Task name:* ${taskName}\n *Task Description:* ${taskDescription}`
+          //opens modal
+          const result = await app.client.views.open({
+            // Pass a valid trigger_id within 3 seconds of receiving it
+            trigger_id: command.trigger_id,
+            // View payload
+            view: view
+          });
+
+        } catch (e) {
+          console.log(e)
+        }
+      })
+    }
+
+  }
+
+
+  });
 
 
 // Handle the Lambda function event
