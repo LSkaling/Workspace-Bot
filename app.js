@@ -414,10 +414,10 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
 
   const taskIDString = command.text
 
-  if (taskIDString.length != 4 || parseInt(taskIDString) == NaN) {
+  if (taskIDString.length != 4 || parseInt(taskIDString) == NaN) { //invalid job id
     await respond("Invalid Job ID. Command should be in the following format: /workspace-complete XXXX")
-  } else {
 
+  } else {
     const taskId = parseInt(taskIDString)
     //open spreadsheet and attempt to find job ID
     await doc.useServiceAccountAuth({
@@ -425,16 +425,7 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
       private_key: creds.private_key,
     });
 
-    await doc.loadInfo(); // loads document properties and worksheets
-    console.log(doc.title);
-
-    const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
-    console.log(sheet.title);
-    console.log(sheet.rowCount);
-
-    const cellRange = `A1:H${sheet.rowCount}`
-
-    await sheet.loadCells(cellRange)
+    const sheet = await loadSpreadsheet()
 
     var taskName
     var taskDescription
@@ -449,6 +440,7 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
     if (taskName == null) { //task was not found in sheet
       await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
     } else {
+
       fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
         if (err) throw err;
         try {
@@ -471,7 +463,7 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
   }
 
 
-  });
+});
 
 
 // Handle the Lambda function event
@@ -479,3 +471,12 @@ module.exports.handler = async (event, context, callback) => {
   const handler = await awsLambdaReceiver.start();
   return handler(event, context, callback);
 }
+
+async function loadSpreadsheet() {
+  await doc.loadInfo(); // loads document properties and worksheets
+  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+  const cellRange = `A1:H${sheet.rowCount}`
+  await sheet.loadCells(cellRange)
+  return sheet
+}
+
