@@ -19,35 +19,35 @@
             "type": "plain_text",
             "text": "Complete"
           },
-          "value": "value-0"
+          "value": "complete"
         },
         {
           "text": {
             "type": "plain_text",
             "text": "Added to order"
           },
-          "value": "value-1"
+          "value": "added_to_order"
         },
         {
           "text": {
             "type": "plain_text",
             "text": "Ordered"
           },
-          "value": "value-2"
+          "value": "ordered"
         },
         {
           "text": {
             "type": "plain_text",
             "text": "Notified facilities"
           },
-          "value": "value-3"
+          "value": "notified_facilities"
         },
         {
           "text": {
             "type": "plain_text",
             "text": "Dismissed"
           },
-          "value": "value-4"
+          "value": "dismissed"
         }
       ],
     "initial_option": {
@@ -55,7 +55,7 @@
         "type": "plain_text",
         "text": "Complete"
       },
-      "value": "value-0"
+      "value": "complete"
     }
     }
   },
