@@ -1,18 +1,18 @@
 
 var fs = require('fs');
 const { App, AwsLambdaReceiver } = require('@slack/bolt');
-const {GoogleSpreadsheet} = require('google-spreadsheet')
-const {promisify} = require('util')
-const {GoogleAuth} = require('google-auth-library');
-const {google} = require('googleapis');
+const { GoogleSpreadsheet } = require('google-spreadsheet')
+const { promisify } = require('util')
+const { GoogleAuth } = require('google-auth-library');
+const { google } = require('googleapis');
 
 const creds = require('./client_secret.json')
 const doc = new GoogleSpreadsheet('1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/');
 
 const auth = new GoogleAuth(
-  {scopes: 'https://www.googleapis.com/auth/spreadsheet'});
+  { scopes: 'https://www.googleapis.com/auth/spreadsheet' });
 
-const service = google.sheets({version: 'v4', auth}); //added from google dev
+const service = google.sheets({ version: 'v4', auth }); //added from google dev
 
 async function accessSpreadsheet() {
   await doc.useServiceAccountAuth({
@@ -55,11 +55,11 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
-    try {        
-      const block = JSON.parse(data);    
+    try {
+      const block = JSON.parse(data);
       block[1].text.text = `*User:* @${command.user_name}`
       block[2].text.text = `*Description:* ${command.text}`
-    
+
       //posts message to workspace core
       await app.client.chat.postMessage({
         channel: "workspace-core",
@@ -67,10 +67,10 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
         text: "New Workspace Request",
         blocks: block,
         metadata: {
-          "requesting_user_id":command.user_id,
+          "requesting_user_id": command.user_id,
           "requesting_user_name": command.user_name
         }
-      }) 
+      })
     } catch (e) {
     }
   });
@@ -87,14 +87,14 @@ app.action('add_task', async ({ body, ack, say }) => {
     "approving_user": body.user.id,
     "message_ts": body.container.message_ts,
     "channel_id": body.container.channel_id,
-    "description" : body.message.blocks[2].text.text,
+    "description": body.message.blocks[2].text.text,
     "approving_user_name": body.user.username
   })
 
   fs.readFile("add_task_modal.json", 'utf8', async (err, data) => {
     if (err) throw err;
-    try {        
-      const block = JSON.parse(data);    
+    try {
+      const block = JSON.parse(data);
       const result = await app.client.views.open({
         // Pass a valid trigger_id within 3 seconds of receiving it
         trigger_id: body.trigger_id,
@@ -131,14 +131,14 @@ app.action('resolve', async ({ body, ack, say }) => {
     "approving_user": body.user.id,
     "message_ts": body.container.message_ts,
     "channel_id": body.container.channel_id,
-    "description" : body.message.blocks[2].text.text,
+    "description": body.message.blocks[2].text.text,
     "approving_user_name": body.user.username
   })
 
   fs.readFile("resolve_modal.json", 'utf8', async (err, data) => {
     if (err) throw err;
-    try {        
-      const block = JSON.parse(data);    
+    try {
+      const block = JSON.parse(data);
       const result = await app.client.views.open({
         // Pass a valid trigger_id within 3 seconds of receiving it
         trigger_id: body.trigger_id,
@@ -189,12 +189,12 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
-    try {        
-      const block = JSON.parse(data); 
+    try {
+      const block = JSON.parse(data);
       block[1].text.text = metadata.requesting_user
-      block[2].text.text = metadata.description   
+      block[2].text.text = metadata.description
       block[4] = {
-        "type":"context",
+        "type": "context",
         "elements": [
           {
             "type": "mrkdwn",
@@ -202,7 +202,7 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
           }
         ]
       };
-    
+
       //posts message to workspace core - add this back in to remove buttons
       // await app.client.chat.update({
       //   channel: metadata.channel_id,
@@ -215,10 +215,9 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
     }
   });
 
-  app.block
 
   //add to spreadsheet
-  
+
   await doc.useServiceAccountAuth({
     client_email: creds.client_email,
     private_key: creds.private_key,
@@ -238,6 +237,58 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
   sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", requesterName, metadata.approving_user_name])
 
 });
+
+//submitting the "resolve" modal
+app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
+  // Acknowledge the view_submission request
+  await ack();
+
+  console.log("modal submitted")
+
+  metadata = JSON.parse(body.view.private_metadata)
+
+  //console.log(`body: ${JSON.stringify(body)}`)
+  //todo: update with new fields
+
+  const dropdown = body.view.state.values.dropdown.resolve_modal_a.selected_option.value
+  const notifyUser = body.view.state.values.button.resolve_modal_a.selected_options != ""
+
+  console.log(`dropdown:  ${dropdown}`)
+  console.log(`button: ${notifyUser}`)
+  
+
+  fs.readFile("request.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {
+      const block = JSON.parse(data);
+      block[1].text.text = metadata.requesting_user
+      block[2].text.text = metadata.description
+      block[4] = {
+        "type": "context",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": `Resolved by <@${metadata.approving_user}>`
+          }
+        ]
+      };
+      // await app.client.chat.update({
+      //   channel: metadata.channel_id,
+      //   link_names: true,
+      //   ts: metadata.message_ts,
+      //   text: "New Workspace Request",
+      //   blocks: block,
+      // })
+
+    } catch (e) {
+      console.log(e)
+    }
+  });
+
+
+
+});
+
 
 
 // Handle the Lambda function event

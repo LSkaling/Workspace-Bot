@@ -1,7 +1,7 @@
 [
   {
     "type": "section",
-    "block_id": "section678",
+    "block_id": "dropdown",
     "text": {
       "type": "mrkdwn",
       "text": "Pick an item from the dropdown list"
@@ -35,7 +35,14 @@
           },
           "value": "value-2"
         }
-      ]
+      ],
+    "initial_option": {
+      "text": {
+        "type": "plain_text",
+        "text": "*this is plain_text text*"
+      },
+      "value": "value-0"
+    }
     }
   },
   {
@@ -43,6 +50,7 @@
   },
   {
     "type": "section",
+    "block_id": "button",
     "text": {
       "type": "plain_text",
       "text": "Check out these charming checkboxes"
