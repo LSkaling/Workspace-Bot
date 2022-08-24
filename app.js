@@ -1,6 +1,33 @@
 
 var fs = require('fs');
 const { App, AwsLambdaReceiver } = require('@slack/bolt');
+const {GoogleSpreadsheet} = require('google-spreadsheet')
+const {promisify} = require('util')
+const {GoogleAuth} = require('google-auth-library');
+const {google} = require('googleapis');
+
+const creds = require('./client_secret.json')
+const doc = new GoogleSpreadsheet('1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/');
+
+const auth = new GoogleAuth(
+  {scopes: 'https://www.googleapis.com/auth/spreadsheet'});
+
+const service = google.sheets({version: 'v4', auth}); //added from google dev
+
+async function accessSpreadsheet() {
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+
+  await doc.loadInfo(); // loads document properties and worksheets
+  console.log(doc.title);
+
+  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+  console.log(sheet.title);
+  console.log(sheet.rowCount);
+
+}
 
 // Initialize your custom receiver
 const awsLambdaReceiver = new AwsLambdaReceiver({
@@ -18,7 +45,6 @@ const app = new App({
 
 app.command('/workspace-request', async ({ command, ack, respond }) => {
   await ack();
-
 
   //posts message to user
   await app.client.chat.postEphemeral({
@@ -129,7 +155,22 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   //add to spreadsheet
   
-  
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+
+  await doc.loadInfo(); // loads document properties and worksheets
+  console.log(doc.title);
+
+  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+  console.log(sheet.title);
+  console.log(sheet.rowCount);
+
+  const cellRange = `A1:H${sheet.rowCount}`
+
+  await sheet.loadCells(cellRange)
+  sheet.addRow([sheet.rowCount, "test2"])
 
 });
 
