@@ -4,56 +4,67 @@
     "block_id": "dropdown",
     "text": {
       "type": "mrkdwn",
-      "text": "Pick an item from the dropdown list"
+      "text": "What is the resolution to this request?"
     },
     "accessory": {
       "action_id": "resolve_modal_a",
       "type": "static_select",
       "placeholder": {
         "type": "plain_text",
-        "text": "Select an item"
+        "text": "Select resolution"
       },
       "options": [
         {
           "text": {
             "type": "plain_text",
-            "text": "*this is plain_text text*"
+            "text": "Complete"
           },
           "value": "value-0"
         },
         {
           "text": {
             "type": "plain_text",
-            "text": "*this is plain_text text*"
+            "text": "Added to order"
           },
           "value": "value-1"
         },
         {
           "text": {
             "type": "plain_text",
-            "text": "*this is plain_text text*"
+            "text": "Ordered"
           },
           "value": "value-2"
+        },
+        {
+          "text": {
+            "type": "plain_text",
+            "text": "Notified facilities"
+          },
+          "value": "value-3"
+        },
+        {
+          "text": {
+            "type": "plain_text",
+            "text": "Dismissed"
+          },
+          "value": "value-4"
         }
       ],
     "initial_option": {
       "text": {
         "type": "plain_text",
-        "text": "*this is plain_text text*"
+        "text": "Complete"
       },
       "value": "value-0"
     }
     }
   },
   {
-    "type": "divider"
-  },
-  {
     "type": "section",
     "block_id": "button",
     "text": {
       "type": "plain_text",
-      "text": "Check out these charming checkboxes"
+      "text": " "
     },
     "accessory": {
       "type": "checkboxes",
@@ -63,7 +74,7 @@
           "value": "A1",
           "text": {
             "type": "plain_text",
-            "text": "Checkbox 1"
+            "text": "Notify requester"
           }
         }
       ],
@@ -72,7 +83,7 @@
           "value": "A1",
           "text": {
             "type": "plain_text",
-            "text": "Checkbox 1"
+            "text": "Notify requester"
           }
         }
       ]

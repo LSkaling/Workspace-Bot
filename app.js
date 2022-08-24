@@ -67,8 +67,11 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
         text: "New Workspace Request",
         blocks: block,
         metadata: {
-          "requesting_user_id": command.user_id,
-          "requesting_user_name": command.user_name
+          event_type: "test",
+          event_payload: {
+            "requester_username": command.user_name,
+            "requester_id": command.user_id
+          }
         }
       })
     } catch (e) {
@@ -82,13 +85,22 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
 app.action('add_task', async ({ body, ack, say }) => {
   await ack();
 
+  //console.log(`body: ${JSON.stringify(body)}`)
+  const receivingMetadata = body.message.metadata.event_payload
+  const requester_username = receivingMetadata.requester_username
+  const requester_id = receivingMetadata.requester_id
+
+
   metadata = JSON.stringify({
-    "requesting_user": body.message.blocks[1].text.text,
-    "approving_user": body.user.id,
+    "requester_username": requester_username,
+    "requester_id": requester_id,
+    "approver_username": body.user.username,
+    "approver_id" : body.user.id,
     "message_ts": body.container.message_ts,
+    "message_user_text": body.message.blocks[1].text.text,
+    "message_description": body.message.blocks[2].text.text,
     "channel_id": body.container.channel_id,
     "description": body.message.blocks[2].text.text,
-    "approving_user_name": body.user.username
   })
 
   fs.readFile("add_task_modal.json", 'utf8', async (err, data) => {
@@ -126,13 +138,20 @@ app.action('add_task', async ({ body, ack, say }) => {
 app.action('resolve', async ({ body, ack, say }) => {
   await ack();
 
+  const receivingMetadata = body.message.metadata.event_payload
+  const requester_username = receivingMetadata.requester_username
+  const requester_id = receivingMetadata.requester_id
+
   metadata = JSON.stringify({
-    "requesting_user": body.message.blocks[1].text.text,
-    "approving_user": body.user.id,
+    "requester_username": requester_username,
+    "requester_id": requester_id,
+    "approver_username": body.user.username,
+    "approver_id" : body.user.id,
     "message_ts": body.container.message_ts,
+    "message_user_text": body.message.blocks[1].text.text,
+    "message_description": body.message.blocks[2].text.text,
     "channel_id": body.container.channel_id,
     "description": body.message.blocks[2].text.text,
-    "approving_user_name": body.user.username
   })
 
   fs.readFile("resolve_modal.json", 'utf8', async (err, data) => {
@@ -185,32 +204,32 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   const nameField = body.view.state.values.input_d.dreamy_input.value
   const detailsField = body.view.state.values.input_c.dreamy_input.value
-  const requesterName = " " //TODO: add requester name
+  const requesterName = metadata.requesterName
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {
       const block = JSON.parse(data);
-      block[1].text.text = metadata.requesting_user
-      block[2].text.text = metadata.description
+      block[1].text.text = metadata.message_user_text
+      block[2].text.text = metadata.message_description
       block[4] = {
         "type": "context",
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Added to tasks by <@${metadata.approving_user}>`
+            "text": `Added to tasks by <@${metadata.approver_id}>`
           }
         ]
       };
 
       //posts message to workspace core - add this back in to remove buttons
-      // await app.client.chat.update({
-      //   channel: metadata.channel_id,
-      //   link_names: true,
-      //   ts: metadata.message_ts,
-      //   text: "New Workspace Request",
-      //   blocks: block,
-      // }) 
+      await app.client.chat.update({
+        channel: metadata.channel_id,
+        link_names: true,
+        ts: metadata.message_ts,
+        text: "New Workspace Request",
+        blocks: block,
+      }) 
     } catch (e) {
     }
   });
@@ -234,7 +253,7 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   await sheet.loadCells(cellRange)
 
-  sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", requesterName, metadata.approving_user_name])
+  sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", metadata.requester_username, metadata.approver_username])
 
 });
 
@@ -247,9 +266,6 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
 
   metadata = JSON.parse(body.view.private_metadata)
 
-  //console.log(`body: ${JSON.stringify(body)}`)
-  //todo: update with new fields
-
   const dropdown = body.view.state.values.dropdown.resolve_modal_a.selected_option.value
   const notifyUser = body.view.state.values.button.resolve_modal_a.selected_options != ""
 
@@ -261,24 +277,24 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
     if (err) throw err;
     try {
       const block = JSON.parse(data);
-      block[1].text.text = metadata.requesting_user
-      block[2].text.text = metadata.description
+      block[1].text.text = metadata.message_user_text
+      block[2].text.text = metadata.message_description
       block[4] = {
         "type": "context",
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Resolved by <@${metadata.approving_user}>`
+            "text": `Marked as ${dropdown} by <@${metadata.approver_id}>`
           }
         ]
       };
-      // await app.client.chat.update({
-      //   channel: metadata.channel_id,
-      //   link_names: true,
-      //   ts: metadata.message_ts,
-      //   text: "New Workspace Request",
-      //   blocks: block,
-      // })
+      await app.client.chat.update({
+        channel: metadata.channel_id,
+        link_names: true,
+        ts: metadata.message_ts,
+        text: "New Workspace Request",
+        blocks: block,
+      })
 
     } catch (e) {
       console.log(e)
