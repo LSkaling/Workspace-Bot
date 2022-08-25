@@ -1,0 +1,59 @@
+[
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Your statistics*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Workspace Help*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "`/workspace-request [request description]` make a request to the workspace managers\n`/workspace-complete [task ID]` record tasks you've completed towards your workspace contributions\n`/workspace-tasks` Displays workspace tasks to do"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "<https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=0|Link to member requirements spreadsheet>"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "<https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=1753132064|Link to cleaning duties spreadsheet>"
+      }
+    },
+    {
+     "type": "divider" 
+    },
+    {
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": "Slack Bot version 0.8\nDeveloped by Lawton Skaling"
+				}
+			]
+		}
+  ]

@@ -556,6 +556,58 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
 
 });
 
+//Workspace help
+app.command('/workspace-info', async ({ command, ack, respond }) => {
+  await ack();
+
+  //console.log(`Command: ${JSON.stringify(command)}`)
+
+  const userID = command.user_id
+  const userinfo = await app.client.users.info({
+    user: userID
+  })
+  const useremail = userinfo.user.profile.email
+
+
+  //fetch from spreadsheet
+
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+
+  await doc.loadInfo(); // loads document properties and worksheets
+
+  const sheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
+
+  const loadCellLocation = `A1:E${sheet.rowCount}`
+  await sheet.loadCells(loadCellLocation);
+  
+  var tasksRequired
+  var tasksCompleted
+
+  for (let i = 0; i < sheet.rowCount; i++) {
+    console.log(`useremail: ${useremail} : ${sheet.getCell(i, 1).value}`)
+    if (sheet.getCell(i, 1).value == useremail) {
+      tasksRequired = sheet.getCell(i, 2).value
+      tasksCompleted = sheet.getCell(i, 3).value
+    }
+  }
+
+  fs.readFile("workspace_info.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {
+      const blocks = JSON.parse(data);
+      blocks[1].text.text = `This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed`
+
+      await respond({"blocks": blocks})
+      //posts message to workspace core
+    } catch (e) {
+      console.log(e)
+    }
+  });
+});
+
 // Handle the Lambda function event
 module.exports.handler = async (event, context, callback) => {
   const handler = await awsLambdaReceiver.start();
