@@ -484,16 +484,23 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
 
   console.log(`username: ${username}`)
 
-  //console.log(`\ntask ID: ${taskID}, userID: ${userID}, useremail: ${useremail}`)
-
-  //update cleaning duties page to reflect completed task
   const taskSheet = await loadTasksSheet() //getcell: (down, across)
   const taskIDValue = parseInt(taskID)
   taskSheet.getCell(taskIDValue, 4).value -= 1
   taskSheet.getCell(taskIDValue, 7).value += `${username}, `
-  await taskSheet.saveUpdatedCells()
+  taskSheet.saveUpdatedCells()
+  //await taskSheet.saveUpdatedCells()
 
   //update requirements page to update user contirbutions
+  const requirementsSheet = await loadRequirementsSheet()
+  for(let i = 0; i < requirementsSheet.rowCount; i++){
+    console.log( `useremail: ${useremail} : ${requirementsSheet.getCell(i, 1).value}`)
+    if(requirementsSheet.getCell(i, 1).value == useremail){
+      requirementsSheet.getCell(i, 3).value += 1
+      await requirementsSheet.saveUpdatedCells()
+
+    }
+  }
 
 });
 
@@ -511,6 +518,18 @@ async function loadTasksSheet() {
   await doc.loadInfo(); // loads document properties and worksheets
   const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
   const cellRange = `A1:H${sheet.rowCount}`
+  await sheet.loadCells(cellRange)
+  return sheet
+}
+
+async function loadRequirementsSheet() {
+  // await doc.useServiceAccountAuth({
+  //   client_email: creds.client_email,
+  //   private_key: creds.private_key,
+  // });
+  await doc.loadInfo(); // loads document properties and worksheets
+  const sheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
+  const cellRange = `A1:E${sheet.rowCount}`
   await sheet.loadCells(cellRange)
   return sheet
 }
