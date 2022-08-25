@@ -75,7 +75,7 @@ app.action('add_task', async ({ body, ack, say }) => {
   metadata = JSON.stringify({
     "requester_username": requester_username,
     "requester_id": requester_id,
-    "approver_username": body.user.username,
+    "approver_username": body.user.name,
     "approver_id": body.user.id,
     "message_ts": body.container.message_ts,
     "message_user_text": body.message.blocks[1].text.text,
@@ -180,7 +180,6 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   const nameField = body.view.state.values.input_d.dreamy_input.value
   const detailsField = body.view.state.values.input_c.dreamy_input.value
-  const requesterName = metadata.requesterName
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
@@ -238,7 +237,14 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
   }
   jobID = `="${jobID}"`
   console.log(`job id: ${jobID}`)
-  await sheet.addRow([jobID, nameField, detailsField, "1", "1", metadata.requester_username, metadata.approver_username])
+
+  const requester = await client.users.info({ user: metadata.requester_id })
+  const requesterName = requester.user.real_name
+
+  const approver = await client.users.info({ user: metadata.approver_id })
+  const approverName = approver.user.real_name
+
+  await sheet.addRow([jobID, nameField, detailsField, "1", "1", requesterName, approverName])
 
   //notify requester
   const text = `Your request has been added to the todo list by <@${metadata.approver_id}>`
@@ -298,6 +304,8 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
 
   metadata = JSON.parse(body.view.private_metadata)
 
+  console.log(`dropdown options: ${JSON.stringify(body.view.state.values.dropdown.resolve_modal_a)}`)
+
   const dropdown = body.view.state.values.dropdown.resolve_modal_a.selected_option.value
   const notifyUser = body.view.state.values.button.resolve_modal_a.selected_options != ""
 
@@ -316,17 +324,17 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `Marked as ${dropdown} by <@${metadata.approver_id}>`
+            "text": `Marked as "${body.view.state.values.dropdown.resolve_modal_a.selected_option.text.text}" by <@${metadata.approver_id}>`
           }
         ]
       };
-      // await app.client.chat.update({
-      //   channel: metadata.channel_id,
-      //   link_names: true,
-      //   ts: metadata.message_ts,
-      //   text: "New Workspace Request",
-      //   blocks: block,
-      // })
+      await app.client.chat.update({
+        channel: metadata.channel_id,
+        link_names: true,
+        ts: metadata.message_ts,
+        text: "New Workspace Request",
+        blocks: block,
+      })
 
     } catch (e) {
       console.log(e)
@@ -457,9 +465,9 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
 
     if (taskName == null) { //task was not found in sheet
       await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
-    } else if(slotsAvailable < 1){
+    } else if (slotsAvailable < 1) {
       await respond(`This job is no longer offered. Double check the job ID, and if you already completed it, please message @workspace.`)
-    }else {
+    } else {
       fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
         if (err) throw err;
         try {
@@ -520,11 +528,11 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
 
   console.log(taskSheet.getCell(taskIDValue, 7).value)
 
-  if(taskSheet.getCell(taskIDValue, 7).value == null){
+  if (taskSheet.getCell(taskIDValue, 7).value == null) {
     console.log("empty")
     await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value = `${username}`
-  }else{
+  } else {
     console.log("not empty")
     await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value += `, ${username}`
