@@ -28,11 +28,7 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
 
   //posts message to user
   try {
-    await app.client.chat.postEphemeral({
-      channel: command.channel_id,
-      user: command.user_id,
-      text: "Your request has been sent to workspace managers. Thanks!"
-    })
+    await respond("Your request has been sent to workspace managers. Thanks!")
   } catch (error) {
     await app.client.chat.postMessage({
       channel: command.user_id,
@@ -236,7 +232,13 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
 
   await sheet.loadCells(cellRange)
 
-  sheet.addRow([sheet.rowCount, nameField, detailsField, "1", "1", metadata.requester_username, metadata.approver_username])
+  var jobID = `${sheet.rowCount}`
+  while (jobID.length < 4) {
+    jobID = `0${jobID}`
+  }
+  jobID = `="${jobID}"`
+  console.log(`job id: ${jobID}`)
+  await sheet.addRow([jobID, nameField, detailsField, "1", "1", metadata.requester_username, metadata.approver_username])
 
   //notify requester
   const text = `Your request has been added to the todo list by <@${metadata.approver_id}>`
@@ -383,29 +385,40 @@ app.command('/workspace-tasks', async ({ command, ack, respond }) => {
   });
 
   await doc.loadInfo(); // loads document properties and worksheets
-  console.log(doc.title);
 
   const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
-  console.log(sheet.title);
-  console.log(sheet.rowCount);
 
-  const loadCellLocation = `A1:B${sheet.rowCount}`
+  const loadCellLocation = `A1:E${sheet.rowCount}`
   await sheet.loadCells(loadCellLocation);
 
   var text = ""//`ID \t Task Title`
 
-  const maxCellsToDispaly = 20
-  const cellsToDisplay = sheet.rowCount > maxCellsToDispaly ? maxCellsToDispaly : sheet.rowCount
-  for (let i = 0; i < cellsToDisplay; i++) {
-    text += `${sheet.getCell(i, 0).value} \t ${sheet.getCell(i, 1).value} \n`
+  //gets first 20 jobs
+  var iterationsCount = 0
+  var itemsCount = 0
+  while (itemsCount < 20 && iterationsCount < sheet.rowCount) {
+
+    if (sheet.getCell(iterationsCount, 4).value != "0") {
+      text += `${sheet.getCell(iterationsCount, 0).value} \t ${sheet.getCell(iterationsCount, 1).value} \n`
+      itemsCount++
+    }
+    iterationsCount++
+
+  }
+  //text += "click here for more info"
+  if (itemsCount == 20) {
+    text += `Showing first 20 results. <https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=1753132064|Click here> for more details and the full list.`
+  } else {
+    text += `<https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=1753132064|Click here> for more details.`
   }
 
-  await app.client.chat.postEphemeral({
-    channel: command.channel_id,
-    user: command.user_id,
-    text: text,
+  await respond(text)
+  // await app.client.chat.postEphemeral({
+  //   channel: command.channel_id,
+  //   user: command.user_id,
+  //   text: text,
 
-  })
+  // })
 });
 
 //completing tasks
@@ -430,6 +443,7 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
     var taskName
     var taskDescription
 
+    //todo: this can be replaced now that we assume the sheet is ordered
     for (let i = 0; i < sheet.rowCount; i++) {
       if (sheet.getCell(i, 0).value == taskId) {
         taskName = sheet.getCell(i, 1).value
@@ -437,11 +451,15 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
       }
     }
 
+    const slotsAvailable = sheet.getCell(taskId, 4).value
+
+    console.log(`slots available: ${slotsAvailable}`)
+
     if (taskName == null) { //task was not found in sheet
       await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
-    } else {
-      
-
+    } else if(slotsAvailable < 1){
+      await respond(`This job is no longer offered. Double check the job ID, and if you already completed it, please message @workspace.`)
+    }else {
       fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
         if (err) throw err;
         try {
@@ -476,7 +494,14 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   const taskID = body.view.private_metadata
   const userID = body.user.id
 
-  let [userinfo, taskSheet, requirementsSheet, doc] = await Promise.all([app.client.users.info({
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+
+  await doc.loadInfo();
+
+  let [userinfo, taskSheet, requirementsSheet] = await Promise.all([app.client.users.info({
     user: userID
   }), loadTasksSheet(), loadRequirementsSheet()])
 
@@ -492,15 +517,29 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   //const taskSheet = await loadTasksSheet() //getcell: (down, across)
   const taskIDValue = parseInt(taskID)
   taskSheet.getCell(taskIDValue, 4).value -= 1
-  taskSheet.getCell(taskIDValue, 7).value += `${username}, `
-  taskSheet.saveUpdatedCells()
+
+  console.log(taskSheet.getCell(taskIDValue, 7).value)
+
+  if(taskSheet.getCell(taskIDValue, 7).value == null){
+    console.log("empty")
+    await taskSheet.saveUpdatedCells()
+    taskSheet.getCell(taskIDValue, 7).value = `${username}`
+  }else{
+    console.log("not empty")
+    await taskSheet.saveUpdatedCells()
+    taskSheet.getCell(taskIDValue, 7).value += `, ${username}`
+  }
+
+
+
+  await taskSheet.saveUpdatedCells()
   //await taskSheet.saveUpdatedCells()
 
   //update requirements page to update user contirbutions
   //const requirementsSheet = await loadRequirementsSheet()
-  for(let i = 0; i < requirementsSheet.rowCount; i++){
-    console.log( `useremail: ${useremail} : ${requirementsSheet.getCell(i, 1).value}`)
-    if(requirementsSheet.getCell(i, 1).value == useremail){
+  for (let i = 0; i < requirementsSheet.rowCount; i++) {
+    console.log(`useremail: ${useremail} : ${requirementsSheet.getCell(i, 1).value}`)
+    if (requirementsSheet.getCell(i, 1).value == useremail) {
       requirementsSheet.getCell(i, 3).value += 1
       await requirementsSheet.saveUpdatedCells()
 
