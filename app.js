@@ -425,7 +425,7 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
       private_key: creds.private_key,
     });
 
-    const sheet = await loadSpreadsheet()
+    const sheet = await loadTasksSheet()
 
     var taskName
     var taskDescription
@@ -448,7 +448,6 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
           const view = JSON.parse(data);
           view.blocks[1].text.text = `*Task ID:* ${taskIDString}\n*Task name:* ${taskName}\n *Task Description:* ${taskDescription}`
           view.private_metadata = taskIDString
-          console.log(JSON.stringify(view))
           //opens modal
           const result = await app.client.views.open({
             // Pass a valid trigger_id within 3 seconds of receiving it
@@ -474,7 +473,6 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   await ack();
 
   //metadata = JSON.parse(body.view.private_metadata)
-  console.log(`submit body: ${JSON.stringify(body.view.private_metadata)}`)
 
   const taskID = body.view.private_metadata
   const userID = body.user.id
@@ -482,11 +480,18 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
     user: userID
   })
   const useremail = userinfo.user.profile.email
+  const username = userinfo.user.real_name
 
-  console.log(`\ntask ID: ${taskID}, userID: ${userID}, useremail: ${useremail}`)
+  console.log(`username: ${username}`)
+
+  //console.log(`\ntask ID: ${taskID}, userID: ${userID}, useremail: ${useremail}`)
 
   //update cleaning duties page to reflect completed task
-
+  const taskSheet = await loadTasksSheet() //getcell: (down, across)
+  const taskIDValue = parseInt(taskID)
+  taskSheet.getCell(taskIDValue, 4).value -= 1
+  taskSheet.getCell(taskIDValue, 7).value += `${username}, `
+  await taskSheet.saveUpdatedCells()
 
   //update requirements page to update user contirbutions
 
@@ -498,7 +503,11 @@ module.exports.handler = async (event, context, callback) => {
   return handler(event, context, callback);
 }
 
-async function loadSpreadsheet() {
+async function loadTasksSheet() {
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
   await doc.loadInfo(); // loads document properties and worksheets
   const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
   const cellRange = `A1:H${sheet.rowCount}`
