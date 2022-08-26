@@ -1,0 +1,44 @@
+  {
+    "channel": "metadata.requester_id",
+    "text": "text",
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "text"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "metadata.message_description"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Task ID:* ${sheet.rowCount}"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Task title:* ${nameField}"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Task description:* ${detailsField}"
+        }
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  }

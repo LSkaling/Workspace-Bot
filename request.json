@@ -1,47 +1,61 @@
-
-[{
-    "type": "section",
-    "text": {
-      "type": "mrkdwn",
-      "text": "New Workspace Request:"
-    }
-  },
-  {
-    "type": "section",
-    "text": {
-      "type": "mrkdwn",
-      "text": "*User:*"
-    }
-  },
-  {
-    "type": "section",
-    "text": {
-      "type": "mrkdwn",
-      "text": "*Description:"
-    }
-  },
-  {
-    "type": "divider"
-  },
-  {
-    "type": "actions",
-    "elements": [
-      {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Add to tasks"
-        },
-        "action_id": "add_task"
-      },
-      {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "text": "Resolve"
-        },
-        "action_id": "resolve"
+{
+  "channel": "workspace-core",
+  "link_names": "true",
+  "text": "New Workspace Request",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "New Workspace Request:"
       }
-    ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*User:*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Description:"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Add to tasks"
+          },
+          "action_id": "add_task"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Resolve"
+          },
+          "action_id": "resolve"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "event_type": "test",
+    "event_payload": {
+      "requester_username": "command.user_name",
+      "requester_id": "command.user_id"
+    }
   }
-]
+
+
+}

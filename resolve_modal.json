@@ -1,92 +1,108 @@
-[
-  {
-    "type": "section",
-    "block_id": "dropdown",
-    "text": {
-      "type": "mrkdwn",
-      "text": "What is the resolution to this request?"
-    },
-    "accessory": {
-      "action_id": "resolve_modal_a",
-      "type": "static_select",
-      "placeholder": {
-        "type": "plain_text",
-        "text": "Select resolution"
-      },
-      "options": [
-        {
-          "text": {
-            "type": "plain_text",
-            "text": "Complete"
-          },
-          "value": "complete"
-        },
-        {
-          "text": {
-            "type": "plain_text",
-            "text": "Added to order"
-          },
-          "value": "added_to_order"
-        },
-        {
-          "text": {
-            "type": "plain_text",
-            "text": "Ordered"
-          },
-          "value": "ordered"
-        },
-        {
-          "text": {
-            "type": "plain_text",
-            "text": "Notified facilities"
-          },
-          "value": "notified_facilities"
-        },
-        {
-          "text": {
-            "type": "plain_text",
-            "text": "Dismissed"
-          },
-          "value": "dismissed"
-        }
-      ],
-    "initial_option": {
-      "text": {
-        "type": "plain_text",
-        "text": "Complete"
-      },
-      "value": "complete"
-    }
-    }
-  },
-  {
-    "type": "section",
-    "block_id": "button",
-    "text": {
+{
+  "trigger_id": "body.trigger_id",
+  "view": {
+    "type": "modal",
+    "callback_id": "resolve_modal",
+    "title": {
       "type": "plain_text",
-      "text": " "
+      "text": "Resolve Task"
     },
-    "accessory": {
-      "type": "checkboxes",
-      "action_id": "resolve_modal_a",
-      "initial_options": [
-        {
-          "value": "A1",
-          "text": {
+    "private_metadata": "metadata",
+    "blocks": [
+      {
+        "type": "section",
+        "block_id": "dropdown",
+        "text": {
+          "type": "mrkdwn",
+          "text": "What is the resolution to this request?"
+        },
+        "accessory": {
+          "action_id": "resolve_modal_a",
+          "type": "static_select",
+          "placeholder": {
             "type": "plain_text",
-            "text": "Notify requester"
+            "text": "Select resolution"
+          },
+          "options": [
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Complete"
+              },
+              "value": "complete"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Added to order"
+              },
+              "value": "added_to_order"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Ordered"
+              },
+              "value": "ordered"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Notified facilities"
+              },
+              "value": "notified_facilities"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Dismissed"
+              },
+              "value": "dismissed"
+            }
+          ],
+          "initial_option": {
+            "text": {
+              "type": "plain_text",
+              "text": "Complete"
+            },
+            "value": "complete"
           }
         }
-      ],
-      "options": [
-        {
-          "value": "A1",
-          "text": {
-            "type": "plain_text",
-            "text": "Notify requester"
-          }
+      },
+      {
+        "type": "section",
+        "block_id": "button",
+        "text": {
+          "type": "plain_text",
+          "text": " "
+        },
+        "accessory": {
+          "type": "checkboxes",
+          "action_id": "resolve_modal_a",
+          "initial_options": [
+            {
+              "value": "A1",
+              "text": {
+                "type": "plain_text",
+                "text": "Notify requester"
+              }
+            }
+          ],
+          "options": [
+            {
+              "value": "A1",
+              "text": {
+                "type": "plain_text",
+                "text": "Notify requester"
+              }
+            }
+          ]
         }
-      ]
+      }
+    ],
+    "submit": {
+      "type": "plain_text",
+      "text": "Resolve"
     }
   }
-]
+}

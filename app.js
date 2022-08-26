@@ -21,42 +21,30 @@ const app = new App({
 
 
 app.command('/workspace-request', async ({ command, ack, respond }) => {
-  await ack();
+  ack();
 
-  //posts message to user
-  await respond("Your request has been sent to workspace managers. Thanks!")
-
-  fs.readFile("request.json", 'utf8', async (err, data) => {
-    if (err) throw err;
-    try {
-      const block = JSON.parse(data);
-      block[1].text.text = `*User:* @${command.user_name}`
-      block[2].text.text = `*Request description:* ${command.text}`
+  try {
+    fs.readFile("request.json", 'utf8', async (err, data) => {
+      if (err) throw err;
+      const messagePayload = JSON.parse(data);
+      messagePayload.blocks[1].text.text = `*User:* @${command.user_name}`
+      messagePayload.blocks[2].text.text = `*Request description:* ${command.text}`
+      messagePayload.metadata.event_payload.requester_username = command.user_name
+      messagePayload.metadata.event_payload.requester_id = command.user_id
 
       //posts message to workspace core
-      await app.client.chat.postMessage({
-        channel: "workspace-core",
-        link_names: true,
-        text: "New Workspace Request",
-        blocks: block,
-        metadata: {
-          event_type: "test",
-          event_payload: {
-            "requester_username": command.user_name,
-            "requester_id": command.user_id
-          }
-        }
-      })
-    } catch (e) {
-    }
-  });
+      await app.client.chat.postMessage(messagePayload)
+      await respond("Your request has been sent to workspace managers. Thanks!")
+    });
+  } catch (error) {
+    reportError(error, "workspace request command")
+  }
 });
 
 //User selects "add task" from workspace request
 app.action('add_task', async ({ body, ack, say }) => {
   await ack();
 
-  //console.log(`body: ${JSON.stringify(body)}`)
   const receivingMetadata = body.message.metadata.event_payload
   const requester_username = receivingMetadata.requester_username
   const requester_id = receivingMetadata.requester_id
@@ -77,30 +65,12 @@ app.action('add_task', async ({ body, ack, say }) => {
   fs.readFile("add_task_modal.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {
-      const block = JSON.parse(data);
-      const result = await app.client.views.open({
-        // Pass a valid trigger_id within 3 seconds of receiving it
-        trigger_id: body.trigger_id,
-        // View payload
-        view: {
-          type: 'modal',
-          // View identifier
-          callback_id: 'add_task_modal',
-          title: {
-            type: 'plain_text',
-            text: 'Add Task'
-          },
-          private_metadata: metadata,
-          blocks: block,
-          submit: {
-            type: 'plain_text',
-            text: 'Add as task'
-          }
-        }
-      });
-      //console.log(result);
+      const modal = JSON.parse(data);
+      modal.trigger_id = body.trigger_id
+      modal.view.private_metadata = metadata
+      await app.client.views.open(modal);
     } catch (e) {
-      console.log(result)
+      console.log(e)
     }
   });
 });
@@ -112,7 +82,6 @@ app.action('resolve', async ({ body, ack, say }) => {
   const receivingMetadata = body.message.metadata.event_payload
   const requester_username = receivingMetadata.requester_username
   const requester_id = receivingMetadata.requester_id
-
 
   metadata = JSON.stringify({
     "requester_username": requester_username,
@@ -129,30 +98,12 @@ app.action('resolve', async ({ body, ack, say }) => {
   fs.readFile("resolve_modal.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {
-      const block = JSON.parse(data);
-      const result = await app.client.views.open({
-        // Pass a valid trigger_id within 3 seconds of receiving it
-        trigger_id: body.trigger_id,
-        // View payload
-        view: {
-          type: 'modal',
-          // View identifier
-          callback_id: 'resolve_modal',
-          title: {
-            type: 'plain_text',
-            text: 'Resolve Task'
-          },
-          private_metadata: metadata,
-          blocks: block,
-          submit: {
-            type: 'plain_text',
-            text: 'Resolve'
-          }
-        }
-      });
-      //console.log(result);
+      const modal = JSON.parse(data);
+      modal.trigger_id = body.trigger_id
+      modal.view.private_metadata = metadata
+      await app.client.views.open(modal);
     } catch (e) {
-      //console.log(result)
+      console.log(error)
     }
   });
 });
@@ -163,7 +114,6 @@ app.action('resolve_modal_b', async ({ body, ack, say }) => { ack() })
 
 //submitting the "add task" modal
 app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
-  // Acknowledge the view_submission request
   await ack();
 
   metadata = JSON.parse(body.view.private_metadata)
@@ -174,10 +124,10 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {
-      const block = JSON.parse(data);
-      block[1].text.text = metadata.message_user_text
-      block[2].text.text = metadata.message_description
-      block[4] = {
+      const modal = JSON.parse(data);
+      modal.blocks[1].text.text = metadata.message_user_text
+      modal.blocks[2].text.text = metadata.message_description
+      modal.blocks[4] = {
         "type": "context",
         "elements": [
           {
@@ -186,103 +136,53 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
           }
         ]
       };
+      modal.ts = metadata.message_ts
+      modal.channel = metadata.channel_id
 
       //posts message to workspace core - add this back in to remove buttons
-      // await app.client.chat.update({
-      //   channel: metadata.channel_id,
-      //   link_names: true,
-      //   ts: metadata.message_ts,
-      //   text: "New Workspace Request",
-      //   blocks: block,
-      // })
-
-
-
+      await app.client.chat.update(modal)
     } catch (e) {
+      console.log(e)
     }
   });
 
 
   //add to spreadsheet
 
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
+  const taskSheet = await loadTasksSheet()
 
-  await doc.loadInfo(); // loads document properties and worksheets
-  console.log(doc.title);
-
-  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
-  console.log(sheet.title);
-  console.log(sheet.rowCount);
-
-  const cellRange = `A1:H${sheet.rowCount}`
-
-  await sheet.loadCells(cellRange)
-
-  var jobID = `${sheet.rowCount}`
-  while (jobID.length < 4) {
-    jobID = `0${jobID}`
-  }
-  jobID = `="${jobID}"`
-  console.log(`job id: ${jobID}`)
-
+  var jobID = convertToJobID(`${taskSheet.rowCount}`)
+ 
   const requester = await client.users.info({ user: metadata.requester_id })
   const requesterName = requester.user.real_name
 
   const approver = await client.users.info({ user: metadata.approver_id })
   const approverName = approver.user.real_name
 
-  await sheet.addRow([jobID, nameField, detailsField, "1", "1", requesterName, approverName])
+  await taskSheet.addRow([jobID, nameField, detailsField, "1", "1", requesterName, approverName])
 
   //notify requester
   const text = `Your request has been added to the todo list by <@${metadata.approver_id}>`
 
-  await app.client.chat.postMessage({
-    channel: metadata.requester_id,
-    text: text,
-    blocks: [{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": text
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": metadata.message_description
-      }
-    }, {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*Task ID:* ${sheet.rowCount}`
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*Task title:* ${nameField}`
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": `*Task description:* ${detailsField}`
-      }
-    },
-    {
-      "type": "divider"
+  fs.readFile("task_added_notification.json", 'utf8', async (err, data) => {
+    if (err) throw err;
+    try {
+      const modal = JSON.parse(data);
+      modal.channel = metadata.requester_id
+      modal.text = text
+      modal.blocks[0].text.text = text
+      modal.blocks[1].text.text = metadata.message_description
+      modal.blocks[2].text.text = `*Task ID:* ${taskSheet.rowCount}`
+      modal.blocks[3].text.text = `*Task title:* ${nameField}`
+      modal.blocks[4].text.text = `*Task description:* ${detailsField}`
+
+      //posts message to workspace core - add this back in to remove buttons
+      await app.client.chat.postMessage(modal)
+
+    } catch (e) {
+      console.log(e)
     }
-    ]
-
-
-  })
+  });
 });
 
 //submitting the "resolve" modal
@@ -559,15 +459,15 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   const apiSheet = await loadAPISheet()
   var remainingWorkspaceTasks = apiSheet.getCellByA1("A2").value
 
-  if(remainingWorkspaceTasks < 10){
+  if (remainingWorkspaceTasks < 10) {
     await app.client.chat.postMessage({
       channel: "workspace-core",
       text: `Warning: only ${remainingWorkspaceTasks} open tasks remain on the cleaning duties sheet.`,
     })
   }
-  
 
-  
+
+
 
 });
 
@@ -597,7 +497,7 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
 
   const loadCellLocation = `A1:E${sheet.rowCount}`
   await sheet.loadCells(loadCellLocation);
-  
+
   var tasksRequired
   var tasksCompleted
 
@@ -615,7 +515,7 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
       const blocks = JSON.parse(data);
       blocks[1].text.text = `This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed`
 
-      await respond({"blocks": blocks})
+      await respond({ "blocks": blocks })
       //posts message to workspace core
     } catch (e) {
       console.log(e)
@@ -630,10 +530,10 @@ module.exports.handler = async (event, context, callback) => {
 }
 
 async function loadTasksSheet() {
-  // await doc.useServiceAccountAuth({
-  //   client_email: creds.client_email,
-  //   private_key: creds.private_key,
-  // });
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
   await doc.loadInfo(); // loads document properties and worksheets
   const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
   const cellRange = `A1:H${sheet.rowCount}`
@@ -660,4 +560,18 @@ async function loadAPISheet() {
   return sheet
 }
 
+async function reportError(error, location){
+  await app.client.chat.postMessage({
+    "channel": "workspace-core",
+    "text": `Error found in ${location}: ${error}`,
+  })
+}
+
+function convertToJobID(jobID){
+  while (jobID.length < 4) {
+    jobID = `0${jobID}`
+  }
+  jobID = `="${jobID}"`
+  return jobID
+}
 

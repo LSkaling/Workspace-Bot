@@ -1,34 +1,44 @@
-[{
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "Description: "
-      }
+{
+  "trigger_id": "body.trigger_id",
+  "view": {
+    "type": "modal",
+    "callback_id": "add_task_modal",
+    "title": {
+      "type": "plain_text",
+      "text": "Add Task"
     },
-    {
-      "type": "input",
-      "block_id": "input_d",
-      "label": {
-        "type": "plain_text",
-        "text": "Task Name"
+    "private_metadata": "metadata",
+    "blocks": [
+      {
+        "type": "input",
+        "block_id": "input_d",
+        "label": {
+          "type": "plain_text",
+          "text": "Task Name"
+        },
+        "element": {
+          "type": "plain_text_input",
+          "action_id": "dreamy_input",
+          "multiline": false
+        }
       },
-      "element": {
-        "type": "plain_text_input",
-        "action_id": "dreamy_input",
-        "multiline": false
+      {
+        "type": "input",
+        "block_id": "input_c",
+        "label": {
+          "type": "plain_text",
+          "text": "Details"
+        },
+        "element": {
+          "type": "plain_text_input",
+          "action_id": "dreamy_input",
+          "multiline": true
+        }
       }
-    },
-    {
-      "type": "input",
-      "block_id": "input_c",
-      "label": {
-        "type": "plain_text",
-        "text": "Details"
-      },
-      "element": {
-        "type": "plain_text_input",
-        "action_id": "dreamy_input",
-        "multiline": true
-      }
+    ],
+    "submit": {
+      "type": "plain_text",
+      "text": "Add as task"
     }
-]
+  }
+}
