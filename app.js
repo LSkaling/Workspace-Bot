@@ -6,9 +6,6 @@ const { GoogleSpreadsheet } = require('google-spreadsheet')
 const creds = require('./client_secret.json')
 const doc = new GoogleSpreadsheet('1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/');
 
-
-
-
 // Initialize your custom receiver
 const awsLambdaReceiver = new AwsLambdaReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -27,14 +24,7 @@ app.command('/workspace-request', async ({ command, ack, respond }) => {
   await ack();
 
   //posts message to user
-  try {
-    await respond("Your request has been sent to workspace managers. Thanks!")
-  } catch (error) {
-    await app.client.chat.postMessage({
-      channel: command.user_id,
-      text: "Your request has been sent to workspace managers. Thanks!"
-    })
-  }
+  await respond("Your request has been sent to workspace managers. Thanks!")
 
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
@@ -541,6 +531,9 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
 
 
   await taskSheet.saveUpdatedCells()
+
+  var completedTasks
+  var requiredTasks
   //await taskSheet.saveUpdatedCells()
 
   //update requirements page to update user contirbutions
@@ -550,9 +543,31 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
     if (requirementsSheet.getCell(i, 1).value == useremail) {
       requirementsSheet.getCell(i, 3).value += 1
       await requirementsSheet.saveUpdatedCells()
-
+      completedTasks = requirementsSheet.getCell(i, 3).value
+      requiredTasks = requirementsSheet.getCell(i, 2).value
     }
   }
+
+  //DM user to thank them
+  await app.client.chat.postMessage({
+    channel: userID,
+    text: `Thank you for helping keep our workspace organized! You've now completed ${completedTasks} of the required ${requiredTasks} tasks.`,
+  })
+
+  //check if fewer than 10 tasks remain and message workspace-core if so
+
+  const apiSheet = await loadAPISheet()
+  var remainingWorkspaceTasks = apiSheet.getCellByA1("A2").value
+
+  if(remainingWorkspaceTasks < 10){
+    await app.client.chat.postMessage({
+      channel: "workspace-core",
+      text: `Warning: only ${remainingWorkspaceTasks} open tasks remain on the cleaning duties sheet.`,
+    })
+  }
+  
+
+  
 
 });
 
@@ -637,4 +652,12 @@ async function loadRequirementsSheet() {
   await sheet.loadCells(cellRange)
   return sheet
 }
+
+async function loadAPISheet() {
+  const sheet = doc.sheetsByIndex[2]; // or use doc.sheetsById[id]
+  const cellRange = `A1:A2`
+  await sheet.loadCells(cellRange)
+  return sheet
+}
+
 
