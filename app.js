@@ -206,10 +206,10 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
   fs.readFile("request.json", 'utf8', async (err, data) => {
     if (err) throw err;
     try {
-      const block = JSON.parse(data);
-      block[1].text.text = metadata.message_user_text
-      block[2].text.text = metadata.message_description
-      block[4] = {
+      const message = JSON.parse(data);
+      message.blocks[1].text.text = metadata.message_user_text
+      message.blocks[2].text.text = metadata.message_description
+      message.blocks[4] = {
         "type": "context",
         "elements": [
           {
@@ -218,16 +218,13 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
           }
         ]
       };
-      await app.client.chat.update({
-        channel: metadata.channel_id,
-        link_names: true,
-        ts: metadata.message_ts,
-        text: "New Workspace Request",
-        blocks: block,
-      })
+      message.ts = metadata.message_ts
+      message.channel = metadata.channel_id
+      await app.client.chat.update(message)
 
     } catch (e) {
       console.log(e)
+      reportError(e, "fetching request.json file to update request text")
     }
 
     //notifying requester
@@ -277,17 +274,7 @@ app.command('/workspace-tasks', async ({ command, ack, respond }) => {
 
   //fetch from spreadsheet
 
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
-
-  await doc.loadInfo(); // loads document properties and worksheets
-
-  const sheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
-
-  const loadCellLocation = `A1:E${sheet.rowCount}`
-  await sheet.loadCells(loadCellLocation);
+  const sheet = await loadTasksSheet()
 
   var text = ""//`ID \t Task Title`
 
@@ -303,7 +290,7 @@ app.command('/workspace-tasks', async ({ command, ack, respond }) => {
     iterationsCount++
 
   }
-  //text += "click here for more info"
+
   if (itemsCount == 20) {
     text += `Showing first 20 results. <https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=1753132064|Click here> for more details and the full list.`
   } else {
@@ -311,12 +298,6 @@ app.command('/workspace-tasks', async ({ command, ack, respond }) => {
   }
 
   await respond(text)
-  // await app.client.chat.postEphemeral({
-  //   channel: command.channel_id,
-  //   user: command.user_id,
-  //   text: text,
-
-  // })
 });
 
 //completing tasks
@@ -331,10 +312,6 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
   } else {
     const taskId = parseInt(taskIDString)
     //open spreadsheet and attempt to find job ID
-    await doc.useServiceAccountAuth({
-      client_email: creds.client_email,
-      private_key: creds.private_key,
-    });
 
     const sheet = await loadTasksSheet()
 
@@ -351,12 +328,10 @@ app.command('/workspace-complete', async ({ command, ack, respond }) => {
 
     const slotsAvailable = sheet.getCell(taskId, 4).value
 
-    console.log(`slots available: ${slotsAvailable}`)
-
     if (taskName == null) { //task was not found in sheet
       await respond(`Error: could not find task ID *"${taskId}"* in the tasks list. Please double check the ID and message @Workspace if the issue persists`)
     } else if (slotsAvailable < 1) {
-      await respond(`This job is no longer offered. Double check the job ID, and if you already completed it, please message @workspace.`)
+      await respond(`This job is no longer offered. Double check the job ID, and if you've already completed it, please message @workspace.`)
     } else {
       fs.readFile("workspace_contribution.json", 'utf8', async (err, data) => {
         if (err) throw err;
@@ -392,25 +367,20 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   const taskID = body.view.private_metadata
   const userID = body.user.id
 
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
+  // await doc.useServiceAccountAuth({
+  //   client_email: creds.client_email,
+  //   private_key: creds.private_key,
+  // });
 
-  await doc.loadInfo();
+  // await doc.loadInfo();
 
   let [userinfo, taskSheet, requirementsSheet] = await Promise.all([app.client.users.info({
     user: userID
   }), loadTasksSheet(), loadRequirementsSheet()])
 
 
-  // const userinfo = await app.client.users.info({
-  //   user: userID
-  // })
   const useremail = userinfo.user.profile.email
   const username = userinfo.user.real_name
-
-  console.log(`username: ${username}`)
 
   //const taskSheet = await loadTasksSheet() //getcell: (down, across)
   const taskIDValue = parseInt(taskID)
@@ -419,25 +389,19 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   console.log(taskSheet.getCell(taskIDValue, 7).value)
 
   if (taskSheet.getCell(taskIDValue, 7).value == null) {
-    console.log("empty")
     await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value = `${username}`
   } else {
-    console.log("not empty")
     await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value += `, ${username}`
   }
-
-
 
   await taskSheet.saveUpdatedCells()
 
   var completedTasks
   var requiredTasks
-  //await taskSheet.saveUpdatedCells()
 
   //update requirements page to update user contirbutions
-  //const requirementsSheet = await loadRequirementsSheet()
   for (let i = 0; i < requirementsSheet.rowCount; i++) {
     console.log(`useremail: ${useremail} : ${requirementsSheet.getCell(i, 1).value}`)
     if (requirementsSheet.getCell(i, 1).value == useremail) {
@@ -466,16 +430,11 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
     })
   }
 
-
-
-
 });
 
 //Workspace help
 app.command('/workspace-info', async ({ command, ack, respond }) => {
   await ack();
-
-  //console.log(`Command: ${JSON.stringify(command)}`)
 
   const userID = command.user_id
   const userinfo = await app.client.users.info({
@@ -486,17 +445,7 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
 
   //fetch from spreadsheet
 
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
-
-  await doc.loadInfo(); // loads document properties and worksheets
-
-  const sheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
-
-  const loadCellLocation = `A1:E${sheet.rowCount}`
-  await sheet.loadCells(loadCellLocation);
+  const sheet = await loadRequirementsSheet();
 
   var tasksRequired
   var tasksCompleted
@@ -542,11 +491,11 @@ async function loadTasksSheet() {
 }
 
 async function loadRequirementsSheet() {
-  // await doc.useServiceAccountAuth({
-  //   client_email: creds.client_email,
-  //   private_key: creds.private_key,
-  // });
-  //await doc.loadInfo(); // loads document properties and worksheets
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+  await doc.loadInfo(); // loads document properties and worksheets
   const sheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
   const cellRange = `A1:E${sheet.rowCount}`
   await sheet.loadCells(cellRange)
