@@ -463,7 +463,11 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
     if (err) throw err;
     try {
       const blocks = JSON.parse(data);
-      blocks[1].text.text = `This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed`
+      if(tasksRequired == undefined){ //not obligated to do tasks
+        blocks[1].text.text = "No workspace requirements for you this quarter."
+      }else{
+        blocks[1].text.text = `This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed`
+      }
 
       await respond({ "blocks": blocks })
       //posts message to workspace core
