@@ -3,7 +3,8 @@ var fs = require('fs');
 const { App, AwsLambdaReceiver } = require('@slack/bolt');
 const { GoogleSpreadsheet } = require('google-spreadsheet')
 
-const creds = require('./client_secret.json')
+const creds = require('./client_secret.json');
+const { channel } = require('diagnostics_channel');
 const doc = new GoogleSpreadsheet('1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/');
 
 // Initialize your custom receiver
@@ -152,7 +153,7 @@ app.view('add_task_modal', async ({ ack, body, view, client, logger }) => {
   const taskSheet = await loadTasksSheet()
 
   var jobID = convertToJobID(`${taskSheet.rowCount}`)
- 
+
   const requester = await client.users.info({ user: metadata.requester_id })
   const requesterName = requester.user.real_name
 
@@ -203,7 +204,7 @@ app.view('resolve_modal', async ({ ack, body, view, client, logger }) => {
   console.log(`button: ${notifyUser}`)
 
 
-  fs.readFile("request.json", 'utf8', async (err, data) => {
+  fs.readFile("request.json", 'utf8', async (err, data) => { //todo: some of this can be taken out of the block I think
     if (err) throw err;
     try {
       const message = JSON.parse(data);
@@ -472,6 +473,56 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
   });
 });
 
+app.command('/dm-all-members', async ({ command, ack, respond }) => {
+
+  await ack();
+
+  if (command.text != "cleanYoShit") {
+    respond("Incorrect password. If you are not a workspace manager, you should not be using this command.")
+
+  } else {
+
+    const requirementsSheet = await loadRequirementsSheet()
+
+    for (let i = 0; i < requirementsSheet.rowCount; i++) {
+      var email
+      try {
+        if (requirementsSheet.getCell(i, 4).value > 0) {
+          const name = requirementsSheet.getCell(i, 0).value
+          email = requirementsSheet.getCell(i, 1).value
+          console.log(`email: ${email}`)
+          var user
+          user = await app.client.users.lookupByEmail({
+            email: email
+          })
+          console.log(`User: ${user}`)
+          const id = user.user.id
+
+          fs.readFile("dm_members_message.json", 'utf8', async (err, data) => {
+            if (err) throw err;
+            try {
+              const message = JSON.parse(data);
+              message.channel = id
+              message.blocks[0].text.text = `Hello, ${name}`
+              await app.client.chat.postMessage(message)
+
+            } catch (e) {
+              console.log(e)
+            }
+          })
+
+        }
+      } catch (e) {
+        console.log(e)
+        reportError(e, `DM members function. User's email: ${email}`)
+      }
+
+
+    }
+  }
+});
+
+
 // Handle the Lambda function event
 module.exports.handler = async (event, context, callback) => {
   const handler = await awsLambdaReceiver.start();
@@ -509,14 +560,14 @@ async function loadAPISheet() {
   return sheet
 }
 
-async function reportError(error, location){
+async function reportError(error, location) {
   await app.client.chat.postMessage({
     "channel": "workspace-core",
     "text": `Error found in ${location}: ${error}`,
   })
 }
 
-function convertToJobID(jobID){
+function convertToJobID(jobID) {
   while (jobID.length < 4) {
     jobID = `0${jobID}`
   }

@@ -1,0 +1,41 @@
+{
+  "channel": "id",
+  "text" : "Our records indicate that you haven't yet completed your workspace obligation this quarter.",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Hi, ${name}"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Our records indicate that you haven't yet completed your workspace obligation this quarter. To ensure our workspace is kept organized we're now requiring all active members to contribute to workspace cleaning each quarter. "
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Type `/workspace-info` for details"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "<https://docs.google.com/spreadsheets/d/1q1pYRZxo9rS-IyfcKZKzBRJSUtAgbmrR8gDL26YFqTQ/edit#gid=1753132064|Click here for the list of tasks to complete>"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "If you have questions, or are not active in SSI this quarter, message @workspace"
+      }
+    }
+  ]
+}
