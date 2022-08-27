@@ -368,17 +368,19 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   const taskID = body.view.private_metadata
   const userID = body.user.id
 
-  // await doc.useServiceAccountAuth({
-  //   client_email: creds.client_email,
-  //   private_key: creds.private_key,
-  // });
+  //const allSheets = await loadAllSheets();
 
-  // await doc.loadInfo();
-
-  let [userinfo, taskSheet, requirementsSheet] = await Promise.all([app.client.users.info({
+  const [userinfo, allSheets] = await Promise.all([await app.client.users.info({
     user: userID
-  }), loadTasksSheet(), loadRequirementsSheet()])
+  }), loadAllSheets()])
 
+  let requirementsSheet = allSheets.requirements_sheet
+  let taskSheet = allSheets.tasks_sheet
+  let apiSheet = allSheets.api_sheet
+
+  // const userinfo = await app.client.users.info({
+  //   user: userID
+  // })
 
   const useremail = userinfo.user.profile.email
   const username = userinfo.user.real_name
@@ -386,18 +388,14 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   //const taskSheet = await loadTasksSheet() //getcell: (down, across)
   const taskIDValue = parseInt(taskID)
   taskSheet.getCell(taskIDValue, 4).value -= 1
-
-  console.log(taskSheet.getCell(taskIDValue, 7).value)
+  await taskSheet.saveUpdatedCells()
 
   if (taskSheet.getCell(taskIDValue, 7).value == null) {
-    await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value = `${username}`
   } else {
-    await taskSheet.saveUpdatedCells()
     taskSheet.getCell(taskIDValue, 7).value += `, ${username}`
   }
-
-  await taskSheet.saveUpdatedCells()
+  taskSheet.saveUpdatedCells()
 
   var completedTasks
   var requiredTasks
@@ -414,18 +412,17 @@ app.view('submit_task', async ({ ack, body, view, client, logger }) => {
   }
 
   //DM user to thank them
-  await app.client.chat.postMessage({
+  app.client.chat.postMessage({
     channel: userID,
     text: `Thank you for helping keep our workspace organized! You've now completed ${completedTasks} of the required ${requiredTasks} tasks.`,
   })
 
   //check if fewer than 10 tasks remain and message workspace-core if so
 
-  const apiSheet = await loadAPISheet()
   var remainingWorkspaceTasks = apiSheet.getCellByA1("A2").value
 
   if (remainingWorkspaceTasks < 10) {
-    await app.client.chat.postMessage({
+    app.client.chat.postMessage({
       channel: "workspace-core",
       text: `Warning: only ${remainingWorkspaceTasks} open tasks remain on the cleaning duties sheet.`,
     })
@@ -438,15 +435,20 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
   await ack();
 
   const userID = command.user_id
-  const userinfo = await app.client.users.info({
+
+  const [userinfo, sheet] = await Promise.all([await app.client.users.info({
     user: userID
-  })
+  }), loadRequirementsSheet()])
+
+  // const userinfo = await app.client.users.info({
+  //   user: userID
+  // })
   const useremail = userinfo.user.profile.email
 
 
   //fetch from spreadsheet
 
-  const sheet = await loadRequirementsSheet();
+  //const sheet = await loadRequirementsSheet();
 
   var tasksRequired
   var tasksCompleted
@@ -469,7 +471,7 @@ app.command('/workspace-info', async ({ command, ack, respond }) => {
         blocks[1].text.text = `This quarter: ${tasksRequired} tasks required, ${tasksCompleted} tasks completed`
       }
 
-      await respond({ "blocks": blocks })
+      respond({ "blocks": blocks })
       //posts message to workspace core
     } catch (e) {
       console.log(e)
@@ -555,6 +557,28 @@ async function loadRequirementsSheet() {
   const cellRange = `A1:E${sheet.rowCount}`
   await sheet.loadCells(cellRange)
   return sheet
+}
+
+async function loadAllSheets(){
+  await doc.useServiceAccountAuth({
+    client_email: creds.client_email,
+    private_key: creds.private_key,
+  });
+  await doc.loadInfo(); // loads document properties and worksheets
+  const requirementsSheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
+  const requirementsCellRange = `A1:E${requirementsSheet.rowCount}`
+  const tasksSheet = doc.sheetsByIndex[1]; // or use doc.sheetsById[id]
+  const tasksCellRange = `A1:H${tasksSheet.rowCount}`
+  const apiSheet = doc.sheetsByIndex[2]; // or use doc.sheetsById[id]
+  const apiCellRange = `A1:A2`
+
+  await Promise.all([requirementsSheet.loadCells(requirementsCellRange), tasksSheet.loadCells(tasksCellRange), apiSheet.loadCells(apiCellRange)])
+
+  return {
+    "requirements_sheet" : requirementsSheet,
+    "tasks_sheet": tasksSheet,
+    "api_sheet": apiSheet
+  }
 }
 
 async function loadAPISheet() {

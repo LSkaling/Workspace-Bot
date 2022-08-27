@@ -7,8 +7,8 @@ provider:
   region: us-west-1
   runtime: nodejs14.x
   environment:
-    SLACK_SIGNING_SECRET: "384f0d124885e9002fc1d2ca38678467"
-    SLACK_BOT_TOKEN: "xoxb-4610823292-3999810566195-woUpvB061zNO49Yccm0CSnsU"
+    SLACK_SIGNING_SECRET: "8720f43068633b1a744121c8eb9a281c"
+    SLACK_BOT_TOKEN: "xoxb-1297207607792-3943670681702-gDmIXvrSB0CpVmf8tz1OML3H"
 functions:
   slack:
     handler: app.handler
