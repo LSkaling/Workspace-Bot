@@ -1,4 +1,4 @@
 node_modules
 .serverless
-serverless.yml
-client_secret.json
+/serverless.yml
+/client_secret.json
